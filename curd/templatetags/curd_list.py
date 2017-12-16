@@ -14,27 +14,24 @@ def list_table(config_obj, objects):
         返回一个上下文对象，用来渲染指定模板
     """
 
+    # 生成一个存放表格数据的装饰器
     def generator_tr(objects):
         def generator_td(object):
-            if config_obj.list_display:
-                for field in config_obj.list_display:
+            if config_obj.get_list_display():
+                for field in config_obj.get_list_display():
                     if isinstance(field, str):
                         val = getattr(object, field)
                     else:
-                        val = field(config_obj, object)
+                        val = field(config_obj, object, is_header=False)
                     yield val
             else:
                 yield from config_obj.model_class.objects.all()
         yield from [generator_td(object) for object in objects]
-        '''
-        [
-            [name, age, gender],
-            [name, age, gender]
-        ]
-        '''
-    if config_obj.list_display:
+
+    # 生成表格的表头数据
+    if config_obj.get_list_display():
         head_list = []
-        for field in config_obj.list_display:
+        for field in config_obj.get_list_display():
             if isinstance(field, str):
                 verbose_name = config_obj.model_class._meta.get_field(field).verbose_name
             else:
