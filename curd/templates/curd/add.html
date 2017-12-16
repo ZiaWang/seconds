@@ -1,0 +1,24 @@
+{% load staticfiles %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="{% static '/curd/plugins/bootstrap/css/bootstrap.css' %}">
+</head>
+<body>
+<h2>add</h2>
+
+<form method="post" novalidate>
+    {% csrf_token %}
+    {% for field in form %}
+        <p>{{ field.label }}{{ field }}{{ field.error.0 }}</p>
+    {% endfor %}
+    <p><input type="submit"></p>
+</form>
+
+
+<script src="{% static '/curd/js/jquery-1.12.4.min.js' %}"></script>
+<script src="{% static '/curd/plugins/bootstrap/js/bootstrap.js' %}"></script>
+</body>
+</html>
