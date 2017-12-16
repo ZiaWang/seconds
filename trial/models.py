@@ -14,7 +14,7 @@ class Book(models.Model):
     price = models.DecimalField(max_digits=5, decimal_places=2, verbose_name='图书价格')
 
     authors = models.ManyToManyField(to='Author', verbose_name='作者')
-    publish = models.ForeignKey(to='Publish', to_field='id', on_delete=True)
+    publish = models.ForeignKey(to='Publish', to_field='id', on_delete=True, verbose_name='出版社')
 
     def __str__(self):
         return self.book_name
@@ -43,16 +43,17 @@ class Publish(models.Model):
 class Author(models.Model):
     """ 作者表
     普通字段:
-        author_name, age, choices_list
+        author_name, age, choices_list, gender
     """
 
     author_name = models.CharField(max_length=32, verbose_name='作者名称')
     age = models.IntegerField(verbose_name='年龄')
     choices_list = [
-        (1, 'male'),
-        (1, 'female'),
+        ('male', 'male'),
+        ('female', 'female'),
     ]
-    gender = models.IntegerField(choices=choices_list, verbose_name='性别')
+
+    gender = models.CharField(choices=choices_list, verbose_name='性别', max_length=32)
 
     def __str__(self):
         return self.author_name
