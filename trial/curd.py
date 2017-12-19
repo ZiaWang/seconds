@@ -2,11 +2,14 @@ from curd.service import sites
 from django.utils.safestring import mark_safe
 from django.urls import re_path, reverse
 from django.forms import ModelForm
+from django.shortcuts import HttpResponse
 
 from trial import models
 
 
 class AuthorModelForm(ModelForm):
+    """ Author表对应模型类 """
+
     class Meta:
         model = models.Author
         fields = "__all__"
@@ -22,10 +25,32 @@ class AuthorModelForm(ModelForm):
 
 
 class AuthorConfig(sites.CURDConfig):
+    """ CURDConfig派生类，用来根据用户权限来自定义功能
+    """
 
+
+
+    show_action_form = True
+    show_search_form = True
+
+    def multi_delete(self, request):
+        """ 批量操作action对应的函数
+        Args:
+            request: 当请求对象，用来获取要操作的记录对象id
+        """
+
+        delete_id_list = request.POST.getlist('id')
+        self.model_class.objects.filter(id__in = delete_id_list).delete()
+        return HttpResponse('这里用来存放用户删除完成后的业务逻辑')
+
+    multi_delete.func_description = '批量删除'              # 定义函数对象属性，用来在模板上显示
 
     def get_show_add_btn(self):
-        # 验证添加按钮权限
+        """ 验证用户是否具备添加记录功能权限
+        Return:
+            如果用户有权限，返回True，否则返回False
+        """
+
         user_has_permission = True     # 模拟权限验证过程
         if user_has_permission:
             return True
@@ -67,12 +92,10 @@ class AuthorConfig(sites.CURDConfig):
             return '喜欢吗'
         return mark_safe('<a href="%s">喜欢这个记录</a>' % self.get_like_url(obj.id))
 
-    list_display = ['author_name', 'age', 'gender']
 
     def get_list_display(self):
-        """ 覆盖基类CURDConfig中的get_list_display方法，并添加一个
+        """ 覆盖基类CURDConfig中的get_list_display方法，并添加一个"""
 
-        """
         data = []
         if self.list_display:
             data.extend(self.list_display)
@@ -83,6 +106,9 @@ class AuthorConfig(sites.CURDConfig):
         return data
 
     model_form_class = AuthorModelForm
+    action_list = [multi_delete,]
+    list_display = ['author_name', 'age', 'gender']
+    search_list = ['author_name__contains', 'gender__contains']
 
 
 sites.site.register(models.Publish)
