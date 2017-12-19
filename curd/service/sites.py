@@ -3,18 +3,57 @@ from django.shortcuts import render, HttpResponse, redirect
 from django.utils.safestring import mark_safe
 from django.urls import reverse
 from django.forms import ModelForm
+from django.http import QueryDict
+from curd.service.views import ShowView
 
 
 class CURDConfig:
     """  为每一个`model_class`模型类生成url路径与视图函数之间的映射关系
 
-    """
+    Methods 分类:
+        路由部分:
+                add_request_decorator
+                get_urls
+                extra_url
 
-    list_display = []           # 存放列表页面表格要显示的字段
+        功能权限部分:
+                get_list_display
+                get_show_add_btn
+                get_show_search_form
+                get_search_list
+                get_show_action_form
+                get_action_list
+
+        记录操作权限部分:
+                delete
+                change
+                checkbox
+
+        反向解析url部分:
+                get_delete_url
+                get_change_url
+                get_add_url
+                get_show_url
+
+        视图函数部分:
+                show_view
+                add_view
+                delete_view
+                change_view
+
+        表单部分:
+                get_model_form_class
+
+        搜索功能部分:
+                create_search_condition
+
+    """
 
     def __init__(self, model_class, curb_site_obj):
         self.model_class = model_class
         self.site = curb_site_obj
+        self.request = None
+        self._query_str_key = '_filter'
 
     def get_app_model(self):
         """ 获取当前模型类的名称和该模型类所在应用的名称
@@ -28,7 +67,20 @@ class CURDConfig:
         )
         return app_model
 
-    # 路由部分
+    def add_request_decorator(self, view_func):
+        """ 在执行进入视图函数之前为config对象添加request属性
+            本项目中没有使用语法糖"@"，而是使用了比较原始的方式.
+            比如：
+                使用"self.add_request_decorator(self.show_view)"
+        Args:
+            view_func: 要被装饰的视图函数
+        """
+
+        def inner(request, *args, **kwargs):
+            self.request = request
+            return view_func(request, *args, **kwargs)
+        return inner
+
     def get_urls(self):
         """ 生成路径与视图函数映射关系的列表，并扩展该列表
         Return:
@@ -38,10 +90,10 @@ class CURDConfig:
         # 生成增、删、改、查基本映射关系
         app_model = self.get_app_model()
         urlpatterns = [
-            re_path(r'^$', self.show_view, name='%s_%s_show' % app_model),
-            re_path(r'^add/$', self.add_view, name='%s_%s_add' % app_model),
-            re_path(r'^(\d+)/delete/$', self.delete_view, name='%s_%s_delete' % app_model),
-            re_path(r'^(\d+)/change/$', self.change_view, name='%s_%s_change' % app_model),
+            re_path(r'^$', self.add_request_decorator(self.show_view), name='%s_%s_show' % app_model),
+            re_path(r'^add/$', self.add_request_decorator(self.add_view), name='%s_%s_add' % app_model),
+            re_path(r'^(\d+)/delete/$', self.add_request_decorator(self.delete_view), name='%s_%s_delete' % app_model),
+            re_path(r'^(\d+)/change/$', self.add_request_decorator(self.change_view), name='%s_%s_change' % app_model),
         ]
 
         # 扩展路由映射关系
@@ -61,7 +113,8 @@ class CURDConfig:
 
         return []
 
-    # 页面显示(权限相关)部分
+    list_display = []  # 存放列表页面表格要显示的字段
+
     def get_list_display(self):
         """ 处理用户权限之内的相关操作，派生CURDConfig类中可以根据用户权限来分配响应的功能按钮/链接，
             实现每个类中可以在增删改查之外，再扩展自己类的URL
@@ -71,9 +124,8 @@ class CURDConfig:
 
         data = []
         if self.list_display:
-            # data.extend(self.list_display)    # 不能是self调用，与后面链接起来，got multiple values for argument 'is_header'
             data.extend(self.list_display)
-            data.append(CURDConfig.delete)
+            data.append(CURDConfig.delete)      # 注意：是函数而不是方法！
             data.append(CURDConfig.change)
             data.insert(0, CURDConfig.checkbox)
         return data
@@ -89,9 +141,8 @@ class CURDConfig:
         # 中间存放业务逻辑
         return self.show_add_btn
 
-    # 定制列表页面要显示的列（功能按钮/链接）
     def delete(self, obj=None, is_header=False):
-        """ 列表页面单条记录删除按钮/链接
+        """ 列表页面单条记录删除按钮/链接，可以在CURDConfig派生类中根据用户权限分配该功能
         Args:
             obj: 该记录对象
             is_header: 当用于生成列表标题"<th>"的时候为True
@@ -105,7 +156,7 @@ class CURDConfig:
         return mark_safe('<a href="%s">删除</a>' % (self.get_delete_url(obj.id), ))
 
     def change(self, obj=None, is_header=False):
-        """ 列表页面单条记录编辑按钮/链接
+        """ 列表页面单条记录编辑按钮/链接，可以在CURDConfig派生类中根据用户权限分配该功能
         Args:
             obj: 该记录对象
             is_header: 当用于生成列表标题"<th>"的时候为True
@@ -115,10 +166,16 @@ class CURDConfig:
 
         if is_header:
             return '编辑'
-        return mark_safe('<a href="%s">编辑</a>' % (self.get_change_url(obj.id), ))
+        query_str = self.request.GET.urlencode()
+        if not query_str:
+            return mark_safe('<a href="%s">编辑</a>' % (self.get_change_url(obj.id), ))
+        else:
+            params = QueryDict(mutable=True)
+            params[self._query_str_key] = query_str
+            return mark_safe('<a href="%s?%s">编辑</a>' % (self.get_change_url(obj.id), params.urlencode(), ))
 
     def checkbox(self, obj=None, is_header=False):
-        """ 列表页面单条记录的选择checkbox，用于批量记录操作
+        """ 列表页面单条记录的选择checkbox，用于批量记录操作，可以在CURDConfig派生类中根据用户权限分配该功能
         Args:
             obj: 该checkbox所在记录对象
             is_header: 当用于生成列表标题"<th>"的时候为True
@@ -130,7 +187,6 @@ class CURDConfig:
             return '选择'
         return mark_safe('<input type="checkbox" name="id" value="%s" />' % (obj.id, ))
 
-    # 反向解析获取url部分
     def get_delete_url(self, nid):
         """ 获取删除记录对应的路径
         Args:
@@ -171,24 +227,31 @@ class CURDConfig:
         alias = 'curd:%s_%s_add' % self.get_app_model()
         return reverse(alias)
 
-    # 视图函数部分
-    def show_view(self, request):
+    def show_view(self, request, *args, **kwargs):
         """ 列表页面对应的视图函数
+        功能:
+            1. 对于GET请求，返回列表页面
+            2. 对于批量操作action的POST请求，执行该action，执行完该action之后，可以自定义返回值，也可以没有，按需求而定
         Return:
             HttpResponse: 返回包含渲染好了的页面的响应对象
         """
 
-        objects = self.model_class.objects.all()
-        return render(request, 'curd/show.html', {"objects": objects,
-                                                  "config_obj": self,
-                                                  "add_url": self.get_add_url(),
-                                                  "show_add_btn": self.get_show_add_btn()})
+        if request.method == 'POST' and self.get_show_action_form():
+            func_name = request.POST.get('action')
+            func = getattr(self, func_name)
+            if func:
+                ret = func(request, *args, **kwargs)
 
-    # form表单部分
+        objects = self.model_class.objects.filter(self.create_search_condition())
+        show_obj = ShowView(self, objects)
+        return render(request, 'curd/show.html', {"show_obj": show_obj})
+
     model_form_class = None
 
     def get_model_form_class(self):
-        """ 获取modelform表单，如果在派生的CURDConfig中创建了ModelForm派生类，就是用该类，否则使用默认的ViewModelForm
+        """ 获取modelform表单，如果在派生的CURDConfig中创建了ModelForm派
+            生类，就使用该类，否则使用默认的ViewModelForm
+
         Return:
             ModelForm类的派生类
         """
@@ -202,6 +265,7 @@ class CURDConfig:
                 {"model": self.model_class,
                  "fields": "__all__"}
             )
+
             ViewModelForm = type(
                 'ViewModelForm',
                 (ModelForm, ),
@@ -209,7 +273,70 @@ class CURDConfig:
             )
             return ViewModelForm
 
-    # 路径处理部分
+
+    show_search_form = False
+
+    def get_show_search_form(self):
+        """ 获取用户搜索权限对应的值。show_search_form默认为false，
+            可以在派生类中根据用户权限修改
+        Return:
+            用户有搜索权限("show_search_form=True")对应的布尔值
+        """
+
+        return self.show_search_form
+
+    search_list = []
+
+    def get_search_list(self):
+        """ 获取要被搜索的字段，该字段来源于列表search_list，
+            可以在派生类中覆盖该列表或根据用户搜索的权限范围划定
+
+        """
+
+        result = []
+        if self.search_list:
+            result.extend(self.search_list)
+        return result
+
+    def create_search_condition(self):
+        """ 根据列表页面搜索框中提交的value创建查询条件
+        Return:
+            返回一个包含了查询条件的Q对象
+        """
+
+        from django.db.models import Q
+
+        query_str = self.request.GET.get('query')
+        query_condition = Q()
+        query_condition.connector = 'OR'
+        if query_str and self.get_show_search_form():       # self.get_show_search_form()判断是为了防止没有所有权限的用户通过url搜索
+            for field in self.get_search_list():
+                query_condition.children.append((field, query_str), )
+        return query_condition
+
+    show_action_form = False
+
+    def get_show_action_form(self):
+        """ 获取用户action批量操作功能对应的权限。show_action_form默认为false，
+            同样需要在派生类中根据用户权限来修改该值
+        Returrn:
+            用户action权限对应的布尔值
+        """
+
+        return self.show_action_form
+
+    action_list = []
+
+    def get_action_list(self):
+        """ 获取action批量操作的具体内容，比如批量删除"multi_delete"，
+            action_list中的元素需要是函数/方法。
+
+        """
+        result = []
+        if self.action_list:
+            result.extend(self.action_list)
+        return result
+
     def add_view(self, request):
         """ 添加记录路径对应的视图函数
         Args:
@@ -268,12 +395,22 @@ class CURDConfig:
             form =model_form_class(data=request.POST, instance=obj)
             if form.is_valid():
                 form.save()
-                return redirect(to=self.get_show_url())
+                # 保证编辑完返回查询的结果路径
+                if request.GET.get(self._query_str_key):
+                    url_redirect = '%s?%s' % (self.get_show_url(), request.GET.get(self._query_str_key))
+                else:
+                    url_redirect = self.get_show_url()
+                return redirect(to=url_redirect)
             else:
                 return render(request, 'curd/change.html', {"form": form})
 
 
 class CURDSite:
+    """ 可以看作一个容器，其静态属性`_registry`放置着`model_class`模
+        型类和模型对应的`config_obj`配置对象。
+
+
+    """
     def __init__(self):
         self._registry = {}         # 存放model及其对应的CURBConfig()实例键值对
 
@@ -311,5 +448,5 @@ class CURDSite:
     def urls(self):
         return self.get_urls(), 'curd', None
 
-# 实现单例模式
-site = CURDSite()
+
+site = CURDSite()       # 实现单例模式
