@@ -11,10 +11,39 @@
 
 <div class="container">
     <h1>list</h1>
-    {% if show_add_btn %}
-        <a href="{{ add_url }}"><button class="btn">添加</button></a>
+    {% if show_obj.show_add_btn %}
+        <a href="{{ show_obj.add_url }}">
+            <button class="btn btn-primary">添加</button>
+        </a>
     {% endif %}
-    {% list_table config_obj objects %}
+    {% if show_obj.show_search_form %}
+        <form method="get">
+            <div class="form-group">
+                <input type="text" name="query" class="form-control"
+                       style="display: inline-block; width: 200px; margin-top: 10px">
+                <button class="btn btn-primary">
+                    <span class="glyphicon glyphicon-search" aria-hidden="true"></span>
+                </button>
+            </div>
+        </form>
+    {% endif %}
+    {% if show_obj.show_action_form %}
+        <form method="post">
+            {% csrf_token %}
+                <select name="action" class="form-control" style="display: inline-block; width: 200px; margin-bottom: 10px">
+                    {% for item in show_obj.template_modify_action_list %}
+                        <option value="{{ item.func_name }}">{{ item.func_description }}</option>
+                    {% endfor %}
+                </select>
+                 <button type="submit" class="btn btn-primary">执行</button>
+            {% endif %}
+            {% list_table show_obj.config_obj show_obj.queryset %}
+        </form>
+    <div class="page">
+        <ul class="pagination">
+            {{ show_obj.page_obj.bootstrap_page_html|safe }}
+        </ul>
+    </div>
 </div>
 
 
