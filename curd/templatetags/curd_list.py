@@ -1,5 +1,5 @@
 from django.template import Library
-from django.utils.safestring import mark_safe
+from curd.service.views import ShowView
 
 register = Library()
 
@@ -13,31 +13,6 @@ def list_table(config_obj, objects):
     Return:
         返回一个上下文对象，用来渲染指定模板
     """
+    show_obj = ShowView(config_obj, objects)
 
-    # 生成一个存放表格数据的装饰器
-    def generator_tr(objects):
-        def generator_td(object):
-            if config_obj.get_list_display():
-                for field in config_obj.get_list_display():
-                    if isinstance(field, str):
-                        val = getattr(object, field)
-                    else:
-                        val = field(config_obj, object, is_header=False)
-                    yield val
-            else:
-                yield from config_obj.model_class.objects.all()
-        yield from [generator_td(object) for object in objects]
-
-    # 生成表格的表头数据
-    if config_obj.get_list_display():
-        head_list = []
-        for field in config_obj.get_list_display():
-            if isinstance(field, str):
-                verbose_name = config_obj.model_class._meta.get_field(field).verbose_name
-            else:
-                verbose_name = field(config_obj, is_header=True)
-            head_list.append(verbose_name)
-    else:
-        head_list = [config_obj.model_class._meta.verbose_name_plural]
-
-    return {"data": generator_tr(objects), "head_list": head_list}
+    return {"data": show_obj.td_list(), "head_list": show_obj.th_list()}
