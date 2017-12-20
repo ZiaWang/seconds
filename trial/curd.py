@@ -3,6 +3,7 @@ from django.utils.safestring import mark_safe
 from django.urls import re_path, reverse
 from django.forms import ModelForm
 from django.shortcuts import HttpResponse
+from curd.service.views import SearchOption
 
 from trial import models
 
@@ -92,9 +93,11 @@ class AuthorConfig(sites.CURDConfig):
             return '喜欢吗'
         return mark_safe('<a href="%s">喜欢这个记录</a>' % self.get_like_url(obj.id))
 
-
     def get_list_display(self):
-        """ 覆盖基类CURDConfig中的get_list_display方法，并添加一个"""
+        """ 覆盖基类CURDConfig中的get_list_display方法，并添加
+            一个，如果只是想添加一个功能，可以不覆盖姊方法，仅仅将创建的函数通过"list_display"传递即可
+
+        """
 
         data = []
         if self.list_display:
@@ -111,6 +114,68 @@ class AuthorConfig(sites.CURDConfig):
     search_list = ['author_name__contains', 'gender__contains']
 
 
-sites.site.register(models.Publish)
+class BookConfig(sites.CURDConfig):
+    def extra_url(self):
+        """ 扩展功能url
+        Return:
+            包含路由映射关系的列表
+        """
+
+        app_model = self.get_app_model()
+
+        extra_patterns = [
+            re_path(r'^(\d+)/like/$', self.like_this, name="%s_%s_like" % app_model)
+        ]
+        return extra_patterns
+
+    def get_like_url(self, nid):
+        """ 反向生成"喜欢"功能对应url
+        Return:
+            返回字符串形式的url
+        """
+
+        alias = "curd:%s_%s_like" % self.get_app_model()
+        return reverse(alias, args=(nid, ))
+
+    def like_this(self, obj=None, is_header=False):
+        """ 列表页面"喜欢"功能链接
+        Args:
+            obj: 当前记录对象
+            is_header: 是否为标题
+        Return:
+            返回该功能对应的url超链接
+        """
+
+        if is_header:
+            return '喜欢吗'
+        return mark_safe('<a href="%s">喜欢这个记录</a>' % self.get_like_url(obj.id))
+
+    def author_display(self, obj=None, is_header=False):
+        """ 定制作者字段在表格中显示的数据，如果默认会显示"trial.Author.None"
+        Args:
+            obj: 当前记录对象
+            is_header: 是否为表头
+        Return:
+            当is_header=True时，返回表头字符串；
+            当is_header=False时，返回tbody单元格内的数据
+        """
+
+        if is_header:
+            return '作者'
+        author_list = [str(author) for author in obj.authors.all()]
+        authors = ','.join(author_list)
+        return authors
+
+    list_display = ['book_name', 'price', author_display, 'publish', like_this]
+    combain_search_field_list = [
+        SearchOption('authors', is_multi=True),
+        SearchOption('publish')
+    ]
+
+
+class PublishConfig(sites.CURDConfig):
+    list_display = []
+
+sites.site.register(models.Publish, PublishConfig)
 sites.site.register(models.Author, AuthorConfig)
-sites.site.register(models.Book)
+sites.site.register(models.Book, BookConfig)
