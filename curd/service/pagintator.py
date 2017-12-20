@@ -47,13 +47,13 @@ class Paingator:
                 self.page_start_num = self.current_page_num - self.half_page_num
                 self.page_end_num = self.current_page_num + self.half_page_num
 
-
     @property
     def start(self):
         """ 返回当前页面第一个对象在对象列表中的索引
 
         """
-
+        if self.total_count < self.per_page_count:
+            return 0
         return (self.current_page_num - 1) * self.per_page_count
 
     @property
