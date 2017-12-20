@@ -1,0 +1,13 @@
+.active{
+    background-color: #2b669a;
+    color: whitesmoke;
+}
+
+.option a{
+    display: inline-block;
+    border-radius: 5%;
+    border: 1px solid blue;
+    margin: 5px 5px;
+    padding: 5px 5px;
+    text-decoration: none;
+}
