@@ -110,7 +110,7 @@ class CURDConfig:
         Return:
             存放了路径与视图函数映射关系的列表(re_path, path, url)
         """
-
+  
         return []
 
     list_display = []  # 存放列表页面表格要显示的字段
