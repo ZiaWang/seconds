@@ -6,11 +6,19 @@
     <meta charset="UTF-8">
     <title>Title</title>
     <link rel="stylesheet" href="{% static '/curd/plugins/bootstrap/css/bootstrap.css' %}">
+    <link rel="stylesheet" href="{% static '/curd/css/show.css' %}">
 </head>
 <body>
 
 <div class="container">
     <h1>list</h1>
+    {% for row in show_obj.template_combain_search_field_list %}
+        <div class="option">
+            {% for option in row %}
+                {{ option }}
+            {% endfor %}
+        </div>
+    {% endfor %}
     {% if show_obj.show_add_btn %}
         <a href="{{ show_obj.add_url }}">
             <button class="btn btn-primary">添加</button>
@@ -29,16 +37,16 @@
     {% endif %}
     {% if show_obj.show_action_form %}
         <form method="post">
-            {% csrf_token %}
-                <select name="action" class="form-control" style="display: inline-block; width: 200px; margin-bottom: 10px">
-                    {% for item in show_obj.template_modify_action_list %}
-                        <option value="{{ item.func_name }}">{{ item.func_description }}</option>
-                    {% endfor %}
-                </select>
-                 <button type="submit" class="btn btn-primary">执行</button>
-            {% endif %}
-            {% list_table show_obj.config_obj show_obj.queryset %}
-        </form>
+        {% csrf_token %}
+        <select name="action" class="form-control" style="display: inline-block; width: 200px; margin-bottom: 10px">
+            {% for item in show_obj.template_modify_action_list %}
+                <option value="{{ item.func_name }}">{{ item.func_description }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-primary">执行</button>
+    {% endif %}
+    {% list_table show_obj.config_obj show_obj.queryset %}
+    </form>
     <div class="page">
         <ul class="pagination">
             {{ show_obj.page_obj.bootstrap_page_html|safe }}
