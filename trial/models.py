@@ -49,11 +49,11 @@ class Author(models.Model):
     author_name = models.CharField(max_length=32, verbose_name='作者名称')
     age = models.IntegerField(verbose_name='年龄')
     choices_list = [
-        ('male', 'male'),
-        ('female', 'female'),
+        (1, 'male'),
+        (2, 'female'),
     ]
 
-    gender = models.CharField(choices=choices_list, verbose_name='性别', max_length=32)
+    gender = models.IntegerField(choices=choices_list, verbose_name='性别')
 
     def __str__(self):
         return self.author_name
