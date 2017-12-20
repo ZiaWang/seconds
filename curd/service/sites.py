@@ -242,7 +242,21 @@ class CURDConfig:
             if func:
                 ret = func(request, *args, **kwargs)
 
-        objects = self.model_class.objects.filter(self.create_search_condition())
+        combain_condition = {}
+        option_list = self.get_combain_search_field_list()
+        for key in request.GET.keys():
+            value_list = request.GET.getlist(key)
+            flag = False
+            for option in option_list:
+                if option.field_name == key:
+                    flag = True
+                    break
+            if flag:
+                combain_condition['%s__in' % key] = value_list
+        # print(self.model_class.objects.filter(self.create_search_condition()))
+        # print(combain_condition)
+        # print(self.model_class.objects.filter(self.create_search_condition()).filter(**combain_condition))
+        objects = self.model_class.objects.filter(self.create_search_condition()).filter(**combain_condition)
         show_obj = ShowView(self, objects)
         return render(request, 'curd/show.html', {"show_obj": show_obj})
 
@@ -272,7 +286,6 @@ class CURDConfig:
                 {"Meta": meta_class}
             )
             return ViewModelForm
-
 
     show_search_form = False
 
@@ -403,6 +416,19 @@ class CURDConfig:
                 return redirect(to=url_redirect)
             else:
                 return render(request, 'curd/change.html', {"form": form})
+
+    # 组合搜索部分
+    combain_search_field_list = []
+
+    def get_combain_search_field_list(self):
+        """ 获取组合搜索中要作为搜索条件的字段，可以在派生类中指定字段
+
+        """
+
+        result = []
+        if self.combain_search_field_list:
+            result.extend(self.combain_search_field_list)
+        return result
 
 
 class CURDSite:
