@@ -46,6 +46,7 @@ class CURDConfig:
 
         搜索功能部分:
                 create_search_condition
+                get_combain_search_field_list
 
     """
 
@@ -110,7 +111,7 @@ class CURDConfig:
         Return:
             存放了路径与视图函数映射关系的列表(re_path, path, url)
         """
-  
+
         return []
 
     list_display = []  # 存放列表页面表格要显示的字段
@@ -236,13 +237,13 @@ class CURDConfig:
             HttpResponse: 返回包含渲染好了的页面的响应对象
         """
 
-        if request.method == 'POST' and self.get_show_action_form():
+        if request.method == 'POST' and self.get_show_action_form():            # action操作提交的POEST请求
             func_name = request.POST.get('action')
             func = getattr(self, func_name)
             if func:
-                ret = func(request, *args, **kwargs)
+                ret = func(request, *args, **kwargs)                            # 可以根据权限自定义返回值
 
-        combain_condition = {}
+        combain_condition = {}                                                  # 组装组合搜索的条件
         option_list = self.get_combain_search_field_list()
         for key in request.GET.keys():
             value_list = request.GET.getlist(key)
@@ -253,9 +254,7 @@ class CURDConfig:
                     break
             if flag:
                 combain_condition['%s__in' % key] = value_list
-        # print(self.model_class.objects.filter(self.create_search_condition()))
-        # print(combain_condition)
-        # print(self.model_class.objects.filter(self.create_search_condition()).filter(**combain_condition))
+
         objects = self.model_class.objects.filter(self.create_search_condition()).filter(**combain_condition)
         show_obj = ShowView(self, objects)
         return render(request, 'curd/show.html', {"show_obj": show_obj})
@@ -327,6 +326,18 @@ class CURDConfig:
                 query_condition.children.append((field, query_str), )
         return query_condition
 
+    combain_search_field_list = []
+
+    def get_combain_search_field_list(self):
+        """ 获取组合搜索中要作为搜索条件的字段，可以在派生类中指定字段
+
+        """
+
+        result = []
+        if self.combain_search_field_list:
+            result.extend(self.combain_search_field_list)
+        return result
+
     show_action_form = False
 
     def get_show_action_form(self):
@@ -361,12 +372,22 @@ class CURDConfig:
         model_form_class = self.get_model_form_class()
 
         if request.method == 'GET':
-            return render(request, 'curd/add.html', {"form": model_form_class()})
+            return render(request, 'curd/add.html', {"form":model_form_class()})
         else:
             form = model_form_class(data=request.POST)
             if form.is_valid():
-                form.save()
-                return redirect(to=self.get_show_url())
+                obj = form.save()
+
+                _popbackid = request.GET.get('_popbackid')                  # 是否是通过popup添加
+                if _popbackid:
+                    response_data = {
+                        "id": obj.pk,
+                        "text": str(obj),
+                        "_popbackid": _popbackid
+                    }
+                    return render(request, "curd/popback.html", {"response_data": response_data})
+                else:
+                    return redirect(to=self.get_show_url())
             else:
                 return render(request, 'curd/add.html', {"form": form})
 
@@ -417,18 +438,6 @@ class CURDConfig:
             else:
                 return render(request, 'curd/change.html', {"form": form})
 
-    # 组合搜索部分
-    combain_search_field_list = []
-
-    def get_combain_search_field_list(self):
-        """ 获取组合搜索中要作为搜索条件的字段，可以在派生类中指定字段
-
-        """
-
-        result = []
-        if self.combain_search_field_list:
-            result.extend(self.combain_search_field_list)
-        return result
 
 
 class CURDSite:
