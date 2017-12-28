@@ -88,9 +88,18 @@ class ShowView(object):
         return result
 
     def add_url(self):
+        """ 获取添加功能对应的url路径
+
+        """
+
         return self.config_obj.get_add_url()
 
     def template_combain_search_field_list(self):
+        """  一个生成器函数，用于渲染组合搜索条件以及每一个条件对应的选项
+        Return:
+            返回值为包含每一行搜索条件选项的SearchRow对象
+        """
+
         from django.db.models import ForeignKey, ManyToManyField
         for search_option_obj in self.combain_search_field_list:
             field = self.model_class._meta.get_field(search_option_obj.field_name)
@@ -115,16 +124,15 @@ class ShowView(object):
             yield row
 
 
-
 class SearchOption(object):
-    """ 用于封装配置信息
+    """ 封装组合搜索的配置项，比如是否是多选，过滤选项等
 
     """
 
     def __init__(self, field_name, is_multi=False, condition=None, is_choices=False):
         self.field_name = field_name
         self.is_multi = is_multi
-        self.condition = condition
+        self.condition = condition              # 过滤选项的条件
         self.is_choices = is_choices
 
     def get_choices(self, field):
@@ -146,12 +154,17 @@ class SearchOption(object):
         """
 
         if self.condition:
-            return field.related_model.objects.filter(**self.condition)
+            try:
+                results = field.related_model.objects.filter(**self.condition)      # Dajngo2.0.  也可使用"field.model"
+            except AttributeError as e:
+                print(e)
+                results = field.rel.to.objects.filter(**self.condition)             # Django2.0以下版本
+            return results
         return field.related_model.objects.all()
 
 
 class SearchRow(object):
-    """ 用于生成每一行的选项
+    """ 用于生成组合搜索中每一行的所有选项以及每一个选项对应url
 
     """
 
@@ -161,6 +174,11 @@ class SearchRow(object):
         self.data = data
 
     def __iter__(self):
+        """ 将对象转换成可迭代对象
+        Return:
+            返回值为每一个选项
+        """
+
         params = deepcopy(self.request.GET)
         params._mutable = True
         current_id = params.get(self.option_obj.field_name)
@@ -189,7 +207,7 @@ class SearchRow(object):
                 else:
                     yield mark_safe('<a href="{0}">{1}</a>'.format(url, text))
             else:                                   # 选项为多选
-                _params = deepcopy(params)      # ！！
+                _params = deepcopy(params)
                 id_list = _params.getlist(self.option_obj.field_name)
 
                 if pk in current_id_list:       # 取消勾选条件
