@@ -1,0 +1,20 @@
+.add_form{
+    margin-top: 20px;
+}
+
+.select_par{
+    position: relative;
+}
+
+.popup_link{
+    position: absolute;
+    right: -20px;
+    bottom: 10px;
+}
+.per-item{
+    margin-top: 20px;!important;
+}
+
+input[type=submit]{
+    margin: 10px;
+}

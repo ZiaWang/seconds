@@ -1,0 +1,40 @@
+{% load staticfiles %}
+<link rel="stylesheet" href="{% static '/curd/css/form.css' %}">
+
+<form method="post" novalidate class="add_form">
+    {% csrf_token %}
+    {% for item in form %}
+            <div class="col-sm-8">
+                <div class="form-group per-item">
+                    <label for="inputEmail3" class="col-sm-2 control-label">{{ item.bound_field.label }}</label>
+                    <div class="col-sm-10 select_par">
+                        {{ item.bound_field }}
+                         {% if item.is_popup %}
+                    <!-- popup中的a标签不要写href -->
+                            <a onclick="popUp('{{ item.popup_url }}')" class="popup_link"><span class="glyphicon glyphicon-plus"
+                                                                     aria-hidden="true"></span></a>
+                    {% endif %}
+                    </div>
+                    {{ item.bound_field.error.0 }}
+
+                </div>
+
+
+            </div>
+    {% endfor %}
+    <div class="col-sm-8 col-sm-offset-7"><p><input class="btn btn-primary" type="submit"></p></div>
+</form>
+<script>
+    function popupCallback(response_data) {
+        var ele_option = document.createElement('option');
+        ele_option.id = response_data.id;
+        ele_option.text = response_data.text;
+        ele_option.setAttribute('selected', 'selected');
+
+        var select = document.getElementById(response_data._popbackid);
+        select.appendChild(ele_option)
+    }
+    function popUp(url) {
+        var popupPage = window.open(url, url, "status=1, height:500, width:600, toolbar=0, resizeable=0");
+    }
+</script>

@@ -1,7 +1,7 @@
 from curd.service import sites
 from django.utils.safestring import mark_safe
 from django.urls import re_path, reverse
-from django.forms import ModelForm
+from django.forms import ModelForm, widgets
 from django.shortcuts import HttpResponse
 from curd.service.views import SearchOption
 
@@ -23,7 +23,34 @@ class AuthorModelForm(ModelForm):
                 "invalid": "年龄必须为数字"
             }
         }
+        widgets = {
+                'author_name': widgets.TextInput(attrs={'class': 'form-control', "placeholder": '作者名称'}),
+                'age': widgets.TextInput(attrs={'class': 'form-control', "placeholder": '作者年龄'}),
+                'gender': widgets.Select(attrs={'class': 'form-control', "placeholder": '作者年龄'},
+                                         choices=models.Author.choices_list),
+        }
 
+class PublishModelForm(ModelForm):
+    class Meta:
+        model = models.Publish
+        fields = '__all__'
+        widgets = {
+            'publish_name': widgets.TextInput(attrs={"class": 'form-control', "placeholder": '出版社名'}),
+            'city': widgets.TextInput(attrs={"class": 'form-control', "placeholder": '城市'}),
+            'email': widgets.TextInput(attrs={"class": 'form-control', "placeholder": '邮箱'}),
+
+        }
+
+class BookModelForm(ModelForm):
+    class Meta:
+        model = models.Book
+        fields = '__all__'
+        widgets = {
+            'book_name': widgets.TextInput(attrs={"class": 'form-control', "placeholder": '图书名'}),
+            'price': widgets.TextInput(attrs={"class": 'form-control', "placeholder": '价格'}),
+            'authors': widgets.SelectMultiple(attrs={"class": 'form-control'},choices=models.Author.objects.all()),
+            'publish': widgets.Select(attrs={"class": 'form-control'},choices=models.Publish.objects.all()),
+        }
 
 class AuthorConfig(sites.CURDConfig):
     """ CURDConfig派生类，用来根据用户权限来自定义功能
@@ -171,10 +198,12 @@ class BookConfig(sites.CURDConfig):
         SearchOption('authors', is_multi=True),
         SearchOption('publish')
     ]
+    model_form_class =BookModelForm
 
 
 class PublishConfig(sites.CURDConfig):
-    list_display = []
+    list_display = ['publish_name', 'city', 'email']
+    model_form_class = PublishModelForm
 
 sites.site.register(models.Publish, PublishConfig)
 sites.site.register(models.Author, AuthorConfig)

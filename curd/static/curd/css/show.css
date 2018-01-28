@@ -1,13 +1,18 @@
 .active{
-    background-color: #2b669a;
+    background-color: #337ab7;
     color: whitesmoke;
 }
 
 .option a{
     display: inline-block;
     border-radius: 5%;
-    border: 1px solid blue;
+    border: 1px solid #337ab7;
     margin: 5px 5px;
     padding: 5px 5px;
     text-decoration: none;
+}
+
+a.add_a{
+    display: inline-block;
+    margin: 5px 5px;
 }

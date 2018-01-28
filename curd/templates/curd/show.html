@@ -11,7 +11,7 @@
 <body>
 
 <div class="container">
-    <h1>list</h1>
+    <h1>列表信息界面</h1>
     {% for row in show_obj.template_combain_search_field_list %}
         <div class="option">
             {% for option in row %}
@@ -20,7 +20,7 @@
         </div>
     {% endfor %}
     {% if show_obj.show_add_btn %}
-        <a href="{{ show_obj.add_url }}">
+        <a href="{{ show_obj.add_url }}" class="add_a">
             <button class="btn btn-primary">添加</button>
         </a>
     {% endif %}

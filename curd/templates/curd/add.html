@@ -1,22 +1,18 @@
 {% load staticfiles %}
+{% load popup %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
     <link rel="stylesheet" href="{% static '/curd/plugins/bootstrap/css/bootstrap.css' %}">
+
 </head>
 <body>
-<h2>add</h2>
-
-<form method="post" novalidate>
-    {% csrf_token %}
-    {% for field in form %}
-        <p>{{ field.label }}{{ field }}{{ field.error.0 }}</p>
-    {% endfor %}
-    <p><input type="submit"></p>
-</form>
-
+<div class="container">
+    <h1>添加数据页面</h1>
+    {% form_popup form %}
+</div>
 
 <script src="{% static '/curd/js/jquery-1.12.4.min.js' %}"></script>
 <script src="{% static '/curd/plugins/bootstrap/js/bootstrap.js' %}"></script>
